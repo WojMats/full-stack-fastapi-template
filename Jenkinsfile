@@ -1,33 +1,47 @@
 pipeline {
     agent any
 
+    environment {
+        COMPOSE_PROJECT_NAME = "ci_pipeline"
+    }
+
     stages {
-        stage('Clone repo') {
+        stage('Checkout') {
             steps {
-                echo 'Repo already cloned ręcznie'
+                echo 'Kod źródłowy pobrany automatycznie przez Jenkins.'
             }
         }
 
-        stage('Build backend Docker image') {
+        stage('Build and Start Containers') {
+            steps {
+                sh 'docker compose -f docker-compose.yml up -d --build'
+            }
+        }
+
+        stage('Run Backend Tests') {
             steps {
                 dir('backend') {
-                    sh 'docker build -t backend-ci .'
+                    sh 'docker run --rm --env-file ../.env backend-ci pytest'
                 }
             }
         }
 
-        stage('Run backend tests') {
+        stage('Stop Containers') {
             steps {
-                dir('backend') {
-                    sh 'docker run --rm backend-ci pytest'
-                }
+                sh 'docker compose -f docker-compose.yml down'
             }
         }
 
-        stage('Success message') {
+        stage('Success') {
             steps {
-                echo 'Pipeline zakończony sukcesem.'
+                echo 'Pipeline zakończony powodzeniem.'
             }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline nie powiódł się.'
         }
     }
 }
